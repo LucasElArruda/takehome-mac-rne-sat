@@ -16,4 +16,83 @@ module mac_rne_sat (
     output logic               ovf        // sticky saturation flag
 );
 
+    logic signed [15:0] p;
+    logic signed [27:0] acc, acc_ff;   // 28-bit accumulator. AKA snapshot.
+    logic signed [19:0] q, round;
+    logic signed [16:0] res_sat;
+    logic ovf_b;
+
+    // Accumulator ff
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            acc_ff <= '0;
+        end else begin
+            acc_ff <= acc;
+        end
+    end
+
+    // Accumulator logic
+    always_comb begin
+        p = a * b;
+        acc = acc_ff;
+        if(!clr && en) begin
+            acc = acc_ff + p;
+        end else if(clr && !en) begin
+            acc = 0;
+        end else if(clr && en) begin
+            acc = p;
+        end
+    end
+
+    // Round logic
+    always_comb begin
+        q = acc_ff[27:8];
+        r = acc_ff - {q, 8'b0};
+        if(r > 128) begin
+            round = q + 1;
+        end else if(r < 128) begin
+            round = q;
+        end else begin
+            if(q[0]) begin
+                // If q is odd, round up
+                round = q + 1;
+            end else begin
+                // If q is even, keep it
+                round = q;
+            end
+        end
+    end
+
+    // Sat logic
+    always_comb begin
+        if(round > 32767) begin
+            res_sat = 32767;
+        end else if(round < -32768) begin
+            res_sat = -32768;
+        end else begin
+            res_sat = round;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if(rst) begin
+            ovf_b <= 0;
+            res_valid <= 0;
+            res <= '0;
+        end else begin
+            if(rd) begin
+                res_valid <= 1;
+                res <= res_sat;
+            end else begin
+                res_valid <= 0;
+            end
+            if(clr) begin
+                ovf_b <= 0;
+            end elseif(res_sat > 32767 || res_sat < -32768) begin
+                ovf_b <= 1;
+            end 
+        end
+    end
+
+
 endmodule
