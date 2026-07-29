@@ -20,6 +20,7 @@ module mac_rne_sat (
     logic signed [27:0] acc, acc_ff;   // 28-bit accumulator. AKA snapshot.
     logic signed [19:0] q, round;
     logic signed [16:0] res_sat;
+    logic [7:0] r;
     logic ovf_b;
 
     // Accumulator ff
@@ -46,14 +47,16 @@ module mac_rne_sat (
 
     // Round logic
     always_comb begin
-        q = acc_ff[27:8];
+        //q = acc_ff[27:8];  // Compilation error on iverlog :(
+        q = acc_ff >> 8;
         r = acc_ff - {q, 8'b0};
         if(r > 128) begin
             round = q + 1;
         end else if(r < 128) begin
             round = q;
         end else begin
-            if(q[0]) begin
+            //if(q[0]) begin // Compilation error on iverlog :(
+            if(q % 2 == 1) begin
                 // If q is odd, round up
                 round = q + 1;
             end else begin
@@ -88,7 +91,7 @@ module mac_rne_sat (
             end
             if(clr) begin
                 ovf_b <= 0;
-            end elseif(res_sat > 32767 || res_sat < -32768) begin
+            end else if(res_sat > 32767 || res_sat < -32768) begin
                 ovf_b <= 1;
             end 
         end
