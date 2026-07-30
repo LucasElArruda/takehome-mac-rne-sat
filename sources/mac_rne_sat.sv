@@ -27,9 +27,9 @@ module mac_rne_sat (
     logic signed [27:0] p_sig_ext;
     logic signed [27:0] acc, acc_ff;   // 28-bit accumulator. AKA snapshot.
     logic signed [19:0] q, round;
-    logic signed [16:0] res_sat;
+    logic signed [15:0] res_sat;
     logic [7:0] r;
-    //logic ovf_b;
+    logic ovf_b;
 
     // Accumulator ff
     always_ff @(posedge clk) begin
@@ -80,10 +80,13 @@ module mac_rne_sat (
     always_comb begin
         if(round > 32767) begin
             res_sat = 32767;
+            ovf_b = 1;
         end else if(round < -32768) begin
             res_sat = -32768;
+            ovf_b = 1;
         end else begin
             res_sat = round;
+            ovf_b = 0;
         end
     end
 
@@ -97,16 +100,13 @@ module mac_rne_sat (
             if(rd) begin
                 res_valid <= 1;
                 res <= res_sat;
+                ovf <= ovf_b;
             end else begin
                 res_valid <= 0;
+                if(clr) begin
+                    ovf <= 0;
+                end
             end
-            if(clr) begin
-                //ovf_b <= 0;
-                ovf <= 0;
-            end else if(res_sat > 32767 || res_sat < -32768) begin
-                //ovf_b <= 1;
-                ovf <= 1;
-            end 
         end
     end
 
