@@ -50,10 +50,10 @@ not be handled.
 Asserting `rd` in cycle *t* requests a snapshot readout.
 
 **Snapshot value.** The snapshot is the accumulator value as it stood at
-the end of cycle *t−1* — that is, **before** any accumulator update
-(`en`/`clr`) occurring in cycle *t*. An `en` asserted in the same cycle as
-`rd` still updates the accumulator normally; it is simply not part of that
-snapshot. A `clr` asserted in the same cycle as `rd` clears the accumulator
+the end of cycle *t−1* - that is: the snapshot is has the accumulated result from previous
+cycles, and the current inputs don't update the current snapshot value.
+An `en` asserted in the same cycle as
+`rd` still updates the accumulator normally. A `clr` asserted in the same cycle as `rd` clears the accumulator
 **after** the snapshot is taken (the readout returns the pre-clear value).
 
 **Rounding — round-half-to-even at the 8 LSBs.** Let
@@ -64,16 +64,17 @@ snapshot. A `clr` asserted in the same cycle as `rd` clears the accumulator
 - `q + 1` if `r > 128`;
 - on a tie (`r == 128`): `q` if `q` is even, else `q + 1`.
 
+The floor() operator here means to round the number to the smallest integer. So floor(1.8) = 1, and floor (-1.2) = -2 for instance.
+
 **Saturation — applied after rounding.** The rounded value is then clamped
 to the signed 16-bit range `[−32768, +32767]`. Note the order: rounding is
 performed first and may itself carry the value out of the 16-bit range;
 saturation applies to the **rounded** value.
 
-**Registration and hold.** `res` and `res_valid` are registered outputs. In
-cycle *t+1*, `res_valid` is 1 and `res` carries the rounded, saturated
-snapshot. `res_valid` is exactly one cycle wide per `rd`. Between readouts,
-`res` **holds** its last value; it does not clear when `res_valid` is low.
-Back-to-back `rd` cycles are permitted and each takes its own snapshot.
+**Registration and hold.** `res` and `res_valid` are registered outputs. `res_valid` is exactly 
+one cycle wide per `rd`. Between readouts,`res` **holds** its last value; it does 
+not clear when `res_valid` is low.Back-to-back `rd` cycles are permitted and each 
+takes its own snapshot.
 
 Worked examples (`snapshot → res`):
 
